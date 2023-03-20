@@ -4,19 +4,19 @@
  * Module dependencies.
  */
 
-const app = require('../app');
-const debug = require('debug')('websocket:server');
-const { createServer } = require('http');
-const { Server } = require('socket.io');
-const { faker } = require('@faker-js/faker');
-const formatDistanceToNow = require('date-fns/formatDistanceToNow')
+const app = require("../app");
+const debug = require("debug")("websocket:server");
+const { createServer } = require("http");
+const { Server } = require("socket.io");
+const { faker } = require("@faker-js/faker");
+const formatDistanceToNow = require("date-fns/formatDistanceToNow");
 
 /**
  * Get port from the environment and store in Express.
  */
 
-const port = normalizePort(process.env.PORT || '5000');
-app.set('port', port);
+const port = normalizePort(process.env.PORT || "5000");
+app.set("port", port);
 
 /**
  * Create HTTP server.
@@ -24,44 +24,53 @@ app.set('port', port);
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-    cors: {
-        origin: '*',
-    }
+  cors: {
+    origin: "*",
+  },
 });
+
+let newId = 4;
+let counter = 0;
 
 function generateRandomDonation(createdDate) {
   const amount = Math.floor(Math.random() * 1000);
   const giftAid = amount > 500 ? Math.floor(Math.random() * 200) : 0;
   const name = faker.name.fullName();
   const message = faker.lorem.sentence(5);
-  const date = formatDistanceToNow(createdDate, { addSuffix: true, includeSeconds: true });
+  const date = formatDistanceToNow(createdDate, {
+    addSuffix: true,
+    includeSeconds: true,
+  });
 
   return {
+    id: newId++,
     donor: name,
     amount: `R${amount}.00`,
     date,
     giftAid: giftAid > 0 ? `R${giftAid}.00` : null,
     feesCovered: amount > 500,
-    message
-  }
+    message,
+  };
 }
 
-io.on('connection', (socket) => {
-  console.log('a user connected');
+io.on("connection", (socket) => {
+  console.log("a user connected");
 
   function sendNewDonation() {
+    if (counter++ > 5) return;
+
     const createdDate = new Date();
 
     setTimeout(() => {
       const newDonation = generateRandomDonation(createdDate);
-      socket.emit('donation', newDonation);
+      socket.emit("donation", newDonation);
     }, 4500);
   }
 
-  setInterval(sendNewDonation, 5000);
+  setInterval(sendNewDonation, 1000 * 10);
 
-  socket.on('disconnect', () => {
-    console.log('user disconnected');
+  socket.on("disconnect", () => {
+    console.log("user disconnected");
   });
 });
 
@@ -70,8 +79,8 @@ io.on('connection', (socket) => {
  */
 
 httpServer.listen(port);
-httpServer.on('error', onError);
-httpServer.on('listening', onListening);
+httpServer.on("error", onError);
+httpServer.on("listening", onListening);
 
 /**
  * Normalize a port into a number, string, or false.
@@ -98,22 +107,20 @@ function normalizePort(val) {
  */
 
 function onError(error) {
-  if (error.syscall !== 'listen') {
+  if (error.syscall !== "listen") {
     throw error;
   }
 
-  const bind = typeof port === 'string'
-    ? 'Pipe ' + port
-    : 'Port ' + port;
+  const bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
 
   // handle specific listen errors with friendly messages
   switch (error.code) {
-    case 'EACCES':
-      console.error(bind + ' requires elevated privileges');
+    case "EACCES":
+      console.error(bind + " requires elevated privileges");
       process.exit(1);
       break;
-    case 'EADDRINUSE':
-      console.error(bind + ' is already in use');
+    case "EADDRINUSE":
+      console.error(bind + " is already in use");
       process.exit(1);
       break;
     default:
@@ -127,8 +134,6 @@ function onError(error) {
 
 function onListening() {
   const addr = httpServer.address();
-  const bind = typeof addr === 'string'
-    ? 'pipe ' + addr
-    : 'port ' + addr.port;
-  debug('Listening on ' + bind);
+  const bind = typeof addr === "string" ? "pipe " + addr : "port " + addr.port;
+  debug("Listening on " + bind);
 }
