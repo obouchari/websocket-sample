@@ -1,0 +1,134 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+const app = require('../app');
+const debug = require('debug')('websocket:server');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
+const { faker } = require('@faker-js/faker');
+const formatDistanceToNow = require('date-fns/formatDistanceToNow')
+
+/**
+ * Get port from the environment and store in Express.
+ */
+
+const port = normalizePort(process.env.PORT || '5000');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+    cors: {
+        origin: '*',
+    }
+});
+
+function generateRandomDonation(createdDate) {
+  const amount = Math.floor(Math.random() * 1000);
+  const giftAid = amount > 500 ? Math.floor(Math.random() * 200) : 0;
+  const name = faker.name.fullName();
+  const message = faker.lorem.sentence(5);
+  const date = formatDistanceToNow(createdDate, { addSuffix: true, includeSeconds: true });
+
+  return {
+    donor: name,
+    amount: `R${amount}.00`,
+    date,
+    giftAid: giftAid > 0 ? `R${giftAid}.00` : null,
+    feesCovered: amount > 500,
+    message
+  }
+}
+
+io.on('connection', (socket) => {
+  console.log('a user connected');
+
+  function sendNewDonation() {
+    const createdDate = new Date();
+
+    setTimeout(() => {
+      const newDonation = generateRandomDonation(createdDate);
+      socket.emit('donation', newDonation);
+    }, 4500);
+  }
+
+  setInterval(sendNewDonation, 5000);
+
+  socket.on('disconnect', () => {
+    console.log('user disconnected');
+  });
+});
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+httpServer.listen(port);
+httpServer.on('error', onError);
+httpServer.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  const port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  const bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  const addr = httpServer.address();
+  const bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}
