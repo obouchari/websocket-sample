@@ -30,7 +30,6 @@ const io = new Server(httpServer, {
 });
 
 let newId = 4;
-let counter = 0;
 
 function generateRandomDonation(createdDate) {
   const amount = Math.floor(Math.random() * 1000);
@@ -56,18 +55,18 @@ function generateRandomDonation(createdDate) {
 io.on("connection", (socket) => {
   console.log("a user connected");
 
-  function sendNewDonation() {
-    if (counter++ > 5) return;
+  for (let i = 1; i < 5; i++) {
+    sendNewDonation(i);
+  }
 
+  function sendNewDonation(i) {
     const createdDate = new Date();
 
     setTimeout(() => {
       const newDonation = generateRandomDonation(createdDate);
       socket.emit("donation", newDonation);
-    }, 4500);
+    }, 3000 * i);
   }
-
-  setInterval(sendNewDonation, 1000 * 10);
 
   socket.on("disconnect", () => {
     console.log("user disconnected");
